@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommended Tracks</title>
+    <style>
+        .track {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .track img {
+            width: 80px;
+            height: 80px;
+            margin-right: 10px;
+            border-radius: 8px;
+        }
+        .track h3 {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .track p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Recommended Tracks</h1>
+
+    {% if tracks %}
+        <ul>
+            {% for track in tracks %}
+                <li class="track">
+                    <img src="{{ track.image_url }}" alt="{{ track.name }}">
+                    <div>
+                        <h3>{{ track.name }}</h3>
+                        <p><strong>Artist:</strong> {{ track.artist }}</p>
+                        <p><strong>Album:</strong> {{ track.album }}</p>
+                        <a href="{{ track.track_url }}" target="_blank">Listen on Spotify</a>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No tracks found for the selected mood.</p>
+    {% endif %}
+</body>
+</html>

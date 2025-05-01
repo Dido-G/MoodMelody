@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Mood</title>
+</head>
+<body>
+    <h1>Select Your Mood</h1>
+    <form method="POST">
+        {% csrf_token %}
+        <label for="mood">Mood:</label>
+        <select name="mood" id="mood">
+            <option value="happy">Happy</option>
+            <option value="sad">Sad</option>
+            <option value="relaxed">Relaxed</option>
+            <option value="angry">Angry</option>
+            <option value="excited">Excited</option>
+        </select>
+        <button type="submit">Get Recommendations</button>
+    </form>
+</body>
+</html>
