@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recommended Tracks</title>
     <style>
         .track {
@@ -39,6 +38,12 @@
                         <p><strong>Artist:</strong> {{ track.artist }}</p>
                         <p><strong>Album:</strong> {{ track.album }}</p>
                         <a href="{{ track.track_url }}" target="_blank">Listen on Spotify</a>
+
+                        <form method="POST" action="{% url 'add_to_spotify' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="track_id" value="{{ track.spotify_id }}">
+                            <button type="submit">❤️ Add to Liked Songs</button>
+                        </form>
                     </div>
                 </li>
             {% endfor %}

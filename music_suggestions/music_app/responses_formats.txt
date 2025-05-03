@@ -1,0 +1,56 @@
+lastfm data format
+{
+  "tracks": {
+    "track": [
+      {
+        "name": "Stayin' Alive",
+        "mbid": "",
+        "url": "http://www.last.fm/music/Bee+Gees/_/Stayin'+Alive",
+        "streamable": {
+          "#text": "1",
+          "fulltrack": "0"
+        },
+        "artist": {
+          "name": "Bee Gees",
+          "mbid": "bf0f7e29-dfe1-416c-b5c6-f9ebc19ea810",
+          "url": "http://www.last.fm/music/Bee+Gees"
+        },
+        "image": [
+          {
+            "#text": "http://.../small.jpg",
+            "size": "small"
+          },
+          {
+            "#text": "http://.../medium.jpg",
+            "size": "medium"
+          },
+          {
+            "#text": "http://.../large.jpg",
+            "size": "large"
+          }
+        ]
+      },
+      ...
+    ]
+  }
+}
+
+sp.search format:
+{
+  'tracks': {
+    'items': [
+      {
+        'name': 'Track Title',
+        'artists': [{'name': 'Artist Name'}, ...],
+        'album': {
+          'name': 'Album Name',
+          'images': [{'url': 'image1'}, ...],
+        },
+        'external_urls': {'spotify': 'https://open.spotify.com/track/xyz'},
+        'id': 'SpotifyTrackID',
+        ...
+      }
+    ],
+    ...
+  }
+}

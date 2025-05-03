@@ -1,13 +1,16 @@
+import os
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 from django.shortcuts import redirect, render
-import random
+from django.views.decorators.csrf import csrf_exempt
 import requests
 
 load_dotenv()
 
-scope = "user-library-read"
+scope = "user-library-read user-library-modify"
+LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
+LASTFM_SHARED_SECRET = os.getenv("LASTFM_SHARED_SECRET")
 
 def login_with_spotify(request):
     sp_oauth = SpotifyOAuth(scope=scope)
@@ -49,7 +52,7 @@ MOOD_FEATURES = {
 def mood_selector(request):
     if request.method == "POST":
         mood = request.POST.get("mood")
-        genres = MOOD_FEATURES.get(mood, [])
+        tag = MOOD_FEATURES.get(mood, {}).get('category')
 
         access_token = request.session.get('access_token') or refresh_access_token(request)
         if not access_token:
@@ -58,32 +61,55 @@ def mood_selector(request):
         sp = spotipy.Spotify(auth=access_token)
 
         try:
-            if genres:
+            if tag:
                 tracks = []
-                for genre in genres:
-                    # Search for tracks within each genre related to the mood
-                    results = sp.search(q=f'genre:"{genre}"', type='track', limit=5)
-                    
-                    # Extract track details from the search results
-                    for track in results['tracks']['items']:
-                        tracks.append({
-                            'name': track['name'],
-                            'artist': ', '.join([artist['name'] for artist in track['artists']]),
-                            'album': track['album']['name'],
-                            'image_url': track['album']['images'][0]['url'],
-                            'track_url': track['external_urls']['spotify']
-                        })
+                lastfm_url = "http://ws.audioscrobbler.com/2.0/"
+                params = {
+                    'method': 'tag.gettoptracks',
+                    'tag': tag,
+                    'api_key': LASTFM_API_KEY,
+                    'format': 'json',
+                    'limit': 10
+                }
+                response = requests.get(lastfm_url, params=params)
+                data = response.json()
+                #lastfm_response_format.txt
 
-                if tracks:
-                    # Remove duplicate tracks if any
-                    tracks = list({track['name']: track for track in tracks}.values())
-                    return render(request, "tracks.html", {"tracks": tracks})
-                else:
-                    return render(request, 'error.html', {'message': f"No tracks found for mood {mood}"})
-            
-            return render(request, 'error.html', {'message': f"No genre mapping found for mood {mood}"})
+                if 'tracks' in data and 'track' in data['tracks']:
+                    for item in data['tracks']['track']:
+                        track_name = item['name']
+                        artist_name = item['artist']['name']
+                        query = f'track:{track_name} artist:{artist_name}'
+                        search_result = sp.search(q=query, type='track', limit=1)
+
+                        if search_result['tracks']['items']:
+                            track = search_result['tracks']['items'][0]
+                            tracks.append({
+                                'name': track['name'],
+                                'artist': ', '.join([a['name'] for a in track['artists']]),
+                                'album': track['album']['name'],
+                                'image_url': track['album']['images'][0]['url'],
+                                'track_url': track['external_urls']['spotify'],
+                                'spotify_id': track['id'],
+                            })
+
+                return render(request, "tracks.html", {"tracks": tracks})
+            else:
+                return render(request, 'error.html', {'message': f"No mood mapping found for {mood}"})
 
         except spotipy.exceptions.SpotifyException as e:
             return render(request, 'error.html', {'message': f"Spotify Error: {e}"})
 
     return render(request, "select_mood.html")
+
+@csrf_exempt
+def add_to_spotify(request):
+    if request.method == "POST":
+        track_id = request.POST.get("track_id")
+        access_token = request.session.get('access_token') or refresh_access_token(request)
+        if not access_token:
+            return redirect('login_with_spotify')
+
+        sp = spotipy.Spotify(auth=access_token)
+        sp.current_user_saved_tracks_add([track_id])  # Adds to liked songs
+        return redirect('mood_selector')
