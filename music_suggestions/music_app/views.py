@@ -5,12 +5,14 @@ from dotenv import load_dotenv
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import requests
+import random
+from .models import Rating, User
+from django.utils import timezone
 
 load_dotenv()
 
 scope = "user-library-read user-library-modify"
 LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
-LASTFM_SHARED_SECRET = os.getenv("LASTFM_SHARED_SECRET")
 
 def login_with_spotify(request):
     sp_oauth = SpotifyOAuth(scope=scope)
@@ -51,7 +53,8 @@ MOOD_FEATURES = {
 
 def mood_selector(request):
     if request.method == "POST":
-        mood = request.POST.get("mood")
+        mood = request.POST.get("mood") or request.session.get("mood")
+        request.session['mood'] = mood  # Store in session for refreshes
         tag = MOOD_FEATURES.get(mood, {}).get('category')
 
         access_token = request.session.get('access_token') or refresh_access_token(request)
@@ -69,14 +72,15 @@ def mood_selector(request):
                     'tag': tag,
                     'api_key': LASTFM_API_KEY,
                     'format': 'json',
-                    'limit': 10
+                    'limit': 20
                 }
                 response = requests.get(lastfm_url, params=params)
                 data = response.json()
-                #lastfm_response_format.txt
 
                 if 'tracks' in data and 'track' in data['tracks']:
-                    for item in data['tracks']['track']:
+                    all_tracks = data['tracks']['track']
+                    random.shuffle(all_tracks)  # Randomize order
+                    for item in all_tracks[:6]:  # Pick first 6 after shuffle
                         track_name = item['name']
                         artist_name = item['artist']['name']
                         query = f'track:{track_name} artist:{artist_name}'
@@ -93,7 +97,7 @@ def mood_selector(request):
                                 'spotify_id': track['id'],
                             })
 
-                return render(request, "tracks.html", {"tracks": tracks})
+                return render(request, "tracks.html", {"tracks": tracks, "mood": mood})
             else:
                 return render(request, 'error.html', {'message': f"No mood mapping found for {mood}"})
 
@@ -111,5 +115,29 @@ def add_to_spotify(request):
             return redirect('login_with_spotify')
 
         sp = spotipy.Spotify(auth=access_token)
-        sp.current_user_saved_tracks_add([track_id])  # Adds to liked songs
+        sp.current_user_saved_tracks_add([track_id])
+        return redirect('mood_selector')
+    
+@csrf_exempt 
+def rate_track(request):
+    if request.method == "POST":
+        track_id = request.POST.get("track_id")
+        mood = request.POST.get("mood")
+        rating = int(request.POST.get("rating"))
+        spotify_id = request.session.get("spotify_id")
+
+        if not spotify_id:
+            return redirect('login_with_spotify')
+
+        user = User.objects.filter(spotify_id=spotify_id).first()
+        if not user:
+            return render(request, 'error.html', {'message': 'User not found in database.'})
+
+        Rating.objects.create(
+            user=user,
+            song_id=track_id,
+            mood=mood,
+            rating=rating,
+            timestamp=timezone.now()
+        )
         return redirect('mood_selector')

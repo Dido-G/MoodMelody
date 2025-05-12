@@ -23,33 +23,136 @@
         .track p {
             margin: 5px 0;
         }
+        .refresh-form {
+            margin-bottom: 30px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 300px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .stars {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .stars input {
+            display: none;
+        }
+        .stars label {
+            font-size: 24px;
+            color: gray;
+            cursor: pointer;
+        }
+        .stars input:checked ~ label {
+            color: gold;
+        }
+        .stars label:hover,
+        .stars label:hover ~ label {
+            color: gold;
+        }
     </style>
 </head>
 <body>
-    <h1>Recommended Tracks</h1>
+<h1>Recommended Tracks</h1>
 
-    {% if tracks %}
-        <ul>
-            {% for track in tracks %}
-                <li class="track">
-                    <img src="{{ track.image_url }}" alt="{{ track.name }}">
-                    <div>
-                        <h3>{{ track.name }}</h3>
-                        <p><strong>Artist:</strong> {{ track.artist }}</p>
-                        <p><strong>Album:</strong> {{ track.album }}</p>
-                        <a href="{{ track.track_url }}" target="_blank">Listen on Spotify</a>
+<div class="refresh-form">
+    <form method="POST" action="{% url 'mood_selector' %}">
+        {% csrf_token %}
+        <input type="hidden" name="mood" value="{{ mood }}">
+        <button type="submit">🔁 Refresh Recommendations</button>
+    </form>
+</div>
 
-                        <form method="POST" action="{% url 'add_to_spotify' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="track_id" value="{{ track.spotify_id }}">
-                            <button type="submit">❤️ Add to Liked Songs</button>
-                        </form>
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>No tracks found for the selected mood.</p>
-    {% endif %}
+{% if tracks %}
+    <ul>
+        {% for track in tracks %}
+            <li class="track">
+                <img src="{{ track.image_url }}" alt="{{ track.name }}">
+                <div>
+                    <h3>{{ track.name }}</h3>
+                    <p><strong>Artist:</strong> {{ track.artist }}</p>
+                    <p><strong>Album:</strong> {{ track.album }}</p>
+                    <a href="{{ track.track_url }}" target="_blank">Listen on Spotify</a>
+
+                    <form method="POST" action="{% url 'add_to_spotify' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="track_id" value="{{ track.spotify_id }}">
+                        <button type="submit">❤️ Add to Liked Songs in Spotify</button>
+                    </form>
+
+                    <!-- Rate Button -->
+                    <button onclick="openModal('{{ track.spotify_id }}')">⭐ Rate</button>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No tracks found for the selected mood.</p>
+{% endif %}
+
+<!-- Modal -->
+<div id="ratingModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3>Rate this track</h3>
+        <form method="POST" action="{% url 'rate_track' %}">
+            {% csrf_token %}
+            <input type="hidden" id="modalTrackId" name="track_id">
+            <input type="hidden" name="mood" value="{{ mood }}">
+            <div class="stars">
+                {% for i in "54321" %}
+                <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}">
+                <label for="star{{ i }}">★</label>
+                {% endfor %}
+            </div>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(trackId) {
+        document.getElementById('modalTrackId').value = trackId;
+        document.getElementById('ratingModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('ratingModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('ratingModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    };
+</script>
+
 </body>
 </html>

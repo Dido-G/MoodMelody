@@ -6,5 +6,6 @@ urlpatterns = [
     path('callback/', views.spotify_callback, name='callback'),
     path('mood/', views.mood_selector, name='mood_selector'),
     path('add/', views.add_to_spotify, name='add_to_spotify'),
+    path("rate-track/", views.rate_track, name="rate_track"),
 
 ]
